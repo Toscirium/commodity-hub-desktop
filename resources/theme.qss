@@ -1,0 +1,368 @@
+/*
+ * Ported from commodity-hub's dark theme tokens (src/index.css, .dark block)
+ * via tailwind.config.ts. Colors are the HSL vars converted to hex; radius
+ * matches --radius (0.5rem = 8px). See resources/theme.qss's counterpart
+ * in the web app for the source of truth if these ever drift.
+ */
+
+* {
+    font-family: "DM Sans";
+}
+
+QWidget {
+    background-color: #0c0c0e; /* --background */
+    color: #e5e7eb;            /* --foreground */
+    font-size: 13px;
+    selection-background-color: #7c3bed; /* --primary */
+    selection-color: #ffffff;
+}
+
+QMainWindow, QDialog {
+    background-color: #0c0c0e;
+}
+
+QWidget#card {
+    background-color: #101113; /* --card */
+    border: 1px solid #27282b; /* --border */
+    border-radius: 14px;
+}
+
+QLabel {
+    background-color: transparent;
+}
+
+QLabel#chartTitle {
+    font-family: "Space Grotesk";
+    font-size: 17px;
+    font-weight: 700;
+    color: #e5e7eb;
+}
+
+/* Big page header, e.g. "Portfolio" / "Overview" — mirrors the web app's
+   bold display heading atop each page. */
+QLabel#pageTitle {
+    font-family: "Space Grotesk";
+    font-size: 24px;
+    font-weight: 700;
+    color: #e5e7eb;
+}
+
+/* Muted one-line description under a pageTitle. */
+QLabel#pageSubtitle {
+    font-size: 13px;
+    color: #898d94; /* --muted-foreground */
+}
+
+/* Small uppercase section/category label (e.g. "CRUDE OIL BENCHMARKS"). */
+QLabel#panelHeading {
+    font-size: 13px;
+    font-weight: 600;
+    color: #898d94; /* --muted-foreground */
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+QWidget#commodityCard {
+    background-color: #101113; /* --card */
+    border: 1px solid #27282b; /* --border */
+    border-radius: 14px;
+}
+
+QWidget#commodityCard:hover {
+    border: 1px solid #3a3b3f;
+}
+
+QLabel#commodityIcon {
+    background-color: rgba(124, 59, 237, 0.15); /* --primary, tinted */
+    color: #a97cf2;
+    border-radius: 8px;
+}
+
+QLabel#commodityName {
+    font-family: "JetBrains Mono";
+    font-size: 14px;
+    font-weight: 700;
+    color: #e5e7eb;
+}
+
+QLabel#commodityPrice {
+    font-family: "JetBrains Mono";
+    font-size: 20px;
+    font-weight: 700;
+    color: #e5e7eb;
+}
+
+QFrame#categoryAccentBar {
+    background-color: #7c3bed; /* --primary */
+    border-radius: 1px;
+}
+
+QLabel#pillBadge {
+    font-family: "JetBrains Mono";
+    font-size: 10px;
+    font-weight: 600;
+    color: #898d94; /* --muted-foreground */
+    background-color: #1a1b1e; /* --secondary */
+    border: 1px solid #27282b;
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+QLineEdit, QComboBox, QSpinBox {
+    background-color: #1a1b1e; /* --secondary */
+    border: 1px solid #27282b; /* --border / --input */
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #e5e7eb;
+    selection-background-color: #7c3bed;
+}
+
+QLineEdit:focus, QComboBox:focus {
+    border: 1px solid #7c3bed; /* --ring */
+}
+
+QLineEdit:disabled, QComboBox:disabled {
+    color: #5c5f66;
+    background-color: #151618;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #131416; /* --popover */
+    border: 1px solid #27282b;
+    border-radius: 8px;
+    selection-background-color: #7c3bed;
+    selection-color: #ffffff;
+    outline: none;
+    padding: 4px;
+}
+
+QPushButton {
+    background-color: #7c3bed; /* --primary */
+    border: none;
+    border-radius: 8px;
+    padding: 7px 16px;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+QPushButton:hover {
+    background-color: #8b52f0;
+}
+
+QPushButton:pressed {
+    background-color: #6a2fd1;
+}
+
+QPushButton:disabled {
+    background-color: #26272b;
+    color: #5c5f66;
+}
+
+QPushButton#secondaryButton {
+    background-color: #1a1b1e; /* --secondary */
+    color: #e5e7eb;
+    border: 1px solid #27282b;
+}
+
+QPushButton#secondaryButton:hover {
+    background-color: #202126;
+}
+
+QPushButton#destructiveButton {
+    background-color: transparent;
+    color: #e74b4b; /* --destructive */
+    border: 1px solid #3a2626;
+}
+
+QPushButton#destructiveButton:hover {
+    background-color: rgba(231, 75, 75, 0.12);
+}
+
+QTableView {
+    background-color: #101113; /* --card */
+    alternate-background-color: #131416;
+    gridline-color: #1d1e20;
+    color: #e5e7eb;
+    border: none;
+    border-radius: 8px;
+    selection-background-color: rgba(124, 59, 237, 0.25);
+    selection-color: #e5e7eb;
+}
+
+QTableView::item {
+    padding: 4px 8px;
+    border: none;
+}
+
+QHeaderView::section {
+    background-color: #101113;
+    color: #898d94; /* --muted-foreground */
+    padding: 6px 8px;
+    border: none;
+    border-bottom: 1px solid #1d1e20;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+QTableView QTableCornerButton::section {
+    background-color: #101113;
+    border: none;
+}
+
+QMenuBar {
+    background-color: #0c0c0e;
+    color: #e5e7eb;
+    border-bottom: 1px solid #1d1e20;
+}
+
+QMenuBar::item:selected {
+    background-color: #1a1b1e;
+    border-radius: 4px;
+}
+
+QMenu {
+    background-color: #131416; /* --popover */
+    color: #e5e7eb;
+    border: 1px solid #27282b;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+QMenu::item {
+    padding: 6px 24px 6px 12px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: #7c3bed;
+    color: #ffffff;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: #27282b;
+    margin: 4px 8px;
+}
+
+QStatusBar {
+    background-color: #0c0c0e;
+    color: #898d94;
+    border-top: 1px solid #1d1e20;
+}
+
+QLabel#statusLabel {
+    color: #e74b4b; /* --destructive */
+}
+
+QListWidget#navRail {
+    background-color: #0c0c0e;
+    border: none;
+    border-right: 1px solid #1d1e20;
+    padding: 8px;
+    outline: none;
+}
+
+QListWidget#navRail::item {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    color: #898d94;
+}
+
+QListWidget#navRail::item:hover {
+    background-color: #1a1b1e;
+    color: #e5e7eb;
+}
+
+QListWidget#navRail::item:selected {
+    background-color: #7c3bed;
+    color: #ffffff;
+}
+
+/* Section labels ("MARKETS" / "TOOLS") are added as disabled, unselectable
+   items so they sit in the same list/scroll area as the rows below them. */
+QListWidget#navRail::item:disabled {
+    color: #5c5f66;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    padding-top: 16px;
+    padding-bottom: 2px;
+    background: transparent;
+}
+
+QLabel#logoTile {
+    background-color: rgba(124, 59, 237, 0.15); /* --primary, tinted */
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+QLabel#emptyState {
+    color: #898d94; /* --muted-foreground */
+    font-style: italic;
+    padding: 24px;
+}
+
+QLabel#errorBanner {
+    background-color: rgba(231, 75, 75, 0.12);
+    color: #e74b4b;
+    border-bottom: 1px solid #3a2626;
+    padding: 8px 16px;
+    font-weight: 500;
+}
+
+QProgressBar#loadingIndicator {
+    background-color: #1a1b1e;
+    border: none;
+    border-radius: 3px;
+}
+
+QProgressBar#loadingIndicator::chunk {
+    background-color: #7c3bed;
+    border-radius: 3px;
+}
+
+QSplitter::handle {
+    background-color: #0c0c0e;
+    width: 8px;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #27282b;
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #34363b;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #27282b;
+    border-radius: 5px;
+    min-width: 24px;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
