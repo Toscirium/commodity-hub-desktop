@@ -10,7 +10,10 @@ parity.
 
 ## Requirements
 
-- **Qt 6.2+** with the Core, Widgets, Network, and Charts modules
+- **Qt 6.2+** with the Core, Widgets, Network, and WebEngineWidgets modules. WebEngineWidgets
+  bundles Chromium and is a genuinely heavy dependency (hundreds of MB) — it's what hosts
+  the candlestick/line chart (TradingView's `lightweight-charts`, vendored under
+  `resources/tradingview/`, rendered inside a `QWebEngineView`).
 - **CMake 3.21+**
 - A C++20 compiler (GCC 11+, Clang 14+, or MSVC 2022+)
 
@@ -19,7 +22,7 @@ parity.
 ### Linux (Debian/Ubuntu)
 
 ```bash
-sudo apt-get install build-essential cmake qt6-base-dev qt6-base-dev-tools libqt6charts6-dev
+sudo apt-get install build-essential cmake qt6-base-dev qt6-base-dev-tools qt6-webengine-dev
 ```
 
 ```bash
@@ -31,7 +34,7 @@ The binary is `build/CommodityHubDesktop`.
 
 ### Windows
 
-1. Install Qt 6 for MSVC via the [Qt Online Installer](https://www.qt.io/download-qt-installer), including the **Charts** module.
+1. Install Qt 6 for MSVC via the [Qt Online Installer](https://www.qt.io/download-qt-installer), including the **WebEngine** module.
 2. Install [CMake](https://cmake.org/download/) and Visual Studio 2022 (Desktop development with C++).
 3. Configure and build, pointing CMake at your Qt install:
    ```powershell
@@ -41,7 +44,8 @@ The binary is `build/CommodityHubDesktop`.
 4. The executable is `build\Release\CommodityHub.exe` (the Windows build renames the
    target from `CommodityHubDesktop` to `CommodityHub` — see `CMakeLists.txt`). Qt's DLLs
    won't be on `PATH` by default; either run from a Qt command prompt, or run
-   `windeployqt build\Release\CommodityHub.exe` to copy the needed DLLs alongside it.
+   `windeployqt --webengine build\Release\CommodityHub.exe` to copy the needed DLLs *and*
+   WebEngine runtime files (helper process, `.pak` resources, locales) alongside it.
 
 ### macOS
 
@@ -50,6 +54,16 @@ brew install qt cmake
 cmake -B build -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
 cmake --build build -j$(sysctl -n hw.ncpu)
 ```
+
+### Packaging note
+
+For a distributable build on any platform, `QWebEngineView` needs its runtime resources
+(the `QtWebEngineProcess` helper binary, `.pak` files, ICU data, locale files) shipped
+alongside the executable, not just the usual Qt DLLs/shared libs. `windeployqt --webengine`
+handles this on Windows; on macOS `macdeployqt` picks it up automatically via the
+WebEngine framework bundle; on Linux, either rely on the system's `qt6-webengine` runtime
+packages being installed, or vendor `libexec/QtWebEngineProcess` and
+`resources/qtwebengine_resources*.pak` from your Qt install next to the binary.
 
 ## Running
 
@@ -77,5 +91,5 @@ src/
   models/    Data models (Commodity, Watchlist, Portfolio, PriceAlert, OhlcBar, ...)
   services/  Async fetch/mutate services wrapping the Supabase REST + Edge Function API
   ui/        QWidget-based panels, dialogs, and MainWindow
-resources/   Fonts, theme stylesheet, Qt resource bundle
+resources/   Fonts, theme stylesheet, vendored TradingView lightweight-charts + chart.html, Qt resource bundle
 ```

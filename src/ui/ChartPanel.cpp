@@ -1,32 +1,19 @@
 #include "ChartPanel.h"
 
-#include <QCandlestickSeries>
-#include <QCandlestickSet>
-#include <QChart>
-#include <QChartView>
 #include <QComboBox>
-#include <QDateTimeAxis>
-#include <QFrame>
+#include <QDateTime>
 #include <QHBoxLayout>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
-#include <QLineSeries>
-#include <QPainter>
 #include <QStandardItemModel>
-#include <QValueAxis>
+#include <QUrl>
 #include <QVBoxLayout>
-#include <algorithm>
-#include <limits>
+#include <QWebEnginePage>
+#include <QWebEngineView>
 
 namespace {
-// commodity-hub dark-theme tokens (see resources/theme.qss for the rest).
-const QColor kCardColor(0x10, 0x11, 0x13);
-const QColor kPrimaryColor(0x7c, 0x3b, 0xed);
-const QColor kBorderColor(0x27, 0x28, 0x2b);
-const QColor kGridColor(0x1d, 0x1e, 0x20);
-const QColor kMutedForeground(0x89, 0x8d, 0x94);
-const QColor kPositiveColor(0x4c, 0xb7, 0x82);
-const QColor kNegativeColor(0xe7, 0x4b, 0x4b);
-
 constexpr int ChartTypeCandlestickIndex = 1;
 }
 
@@ -52,45 +39,13 @@ ChartPanel::ChartPanel(QWidget *parent)
     m_chartTypeCombo->addItem(tr("Line"), QStringLiteral("line"));
     m_chartTypeCombo->addItem(tr("Candlestick"), QStringLiteral("candlestick"));
 
-    m_series = new QLineSeries(this);
-    m_series->setPen(QPen(kPrimaryColor, 2));
-
-    m_candlestickSeries = new QCandlestickSeries(this);
-    m_candlestickSeries->setIncreasingColor(kPositiveColor);
-    m_candlestickSeries->setDecreasingColor(kNegativeColor);
-    m_candlestickSeries->setBodyOutlineVisible(false);
-    m_candlestickSeries->setVisible(false);
-
-    m_axisX = new QDateTimeAxis(this);
-    m_axisX->setFormat("MMM d");
-    m_axisX->setLabelsColor(kMutedForeground);
-    m_axisX->setLinePen(QPen(kBorderColor));
-    m_axisX->setGridLinePen(QPen(kGridColor));
-
-    m_axisY = new QValueAxis(this);
-    m_axisY->setLabelFormat("%.2f");
-    m_axisY->setLabelsColor(kMutedForeground);
-    m_axisY->setLinePen(QPen(kBorderColor));
-    m_axisY->setGridLinePen(QPen(kGridColor));
-
-    m_chart = new QChart();
-    m_chart->addSeries(m_series);
-    m_chart->addSeries(m_candlestickSeries);
-    m_chart->addAxis(m_axisX, Qt::AlignBottom);
-    m_chart->addAxis(m_axisY, Qt::AlignLeft);
-    m_series->attachAxis(m_axisX);
-    m_series->attachAxis(m_axisY);
-    m_candlestickSeries->attachAxis(m_axisX);
-    m_candlestickSeries->attachAxis(m_axisY);
-    m_chart->legend()->hide();
-    m_chart->setBackgroundBrush(QBrush(kCardColor));
-    m_chart->setBackgroundPen(QPen(Qt::NoPen));
-    m_chart->setMargins(QMargins(4, 8, 12, 4));
-
-    m_chartView = new QChartView(m_chart, this);
-    m_chartView->setRenderHint(QPainter::Antialiasing);
-    m_chartView->setBackgroundBrush(QBrush(kCardColor));
-    m_chartView->setFrameShape(QFrame::NoFrame);
+    // Candlestick/line rendering itself is TradingView's lightweight-charts,
+    // vendored under resources/tradingview/ and hosted by chart.html - see
+    // that file for the JS side (window.setBars/clearData/setChartType).
+    m_webView = new QWebEngineView(this);
+    m_webView->setContextMenuPolicy(Qt::NoContextMenu);
+    m_webView->load(QUrl(QStringLiteral("qrc:/tradingview/chart.html")));
+    connect(m_webView, &QWebEngineView::loadFinished, this, &ChartPanel::onPageLoadFinished);
 
     auto *headerRow = new QHBoxLayout;
     headerRow->addWidget(m_titleLabel, 1);
@@ -101,7 +56,7 @@ ChartPanel::ChartPanel(QWidget *parent)
     layout->setContentsMargins(16, 16, 16, 16);
     layout->setSpacing(10);
     layout->addLayout(headerRow);
-    layout->addWidget(m_chartView, 1);
+    layout->addWidget(m_webView, 1);
 
     connect(m_timeframeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             &ChartPanel::onTimeframeChanged);
@@ -109,12 +64,31 @@ ChartPanel::ChartPanel(QWidget *parent)
             &ChartPanel::onChartTypeChanged);
 }
 
+void ChartPanel::runJs(const QString &js)
+{
+    if (m_pageReady)
+        m_webView->page()->runJavaScript(js);
+    else
+        m_pendingJs.append(js);
+}
+
+void ChartPanel::onPageLoadFinished(bool ok)
+{
+    if (!ok)
+        return;
+
+    m_pageReady = true;
+    const QVector<QString> pending = m_pendingJs;
+    m_pendingJs.clear();
+    for (const QString &js : pending)
+        m_webView->page()->runJavaScript(js);
+}
+
 void ChartPanel::setCommodityName(const QString &name)
 {
     m_commodityName = name;
     m_titleLabel->setText(name);
-    m_series->clear();
-    m_candlestickSeries->clear();
+    runJs(QStringLiteral("window.clearData();"));
 }
 
 void ChartPanel::setBars(const QString &commodityName, const QVector<OhlcBar> &bars, bool ohlcAvailable)
@@ -122,49 +96,37 @@ void ChartPanel::setBars(const QString &commodityName, const QVector<OhlcBar> &b
     if (commodityName != m_commodityName)
         return;
 
-    m_series->clear();
-    m_candlestickSeries->clear();
-
     m_ohlcAvailable = ohlcAvailable;
     applyChartTypeAvailability();
 
-    // '1D' bars are now real sub-daily (5min) candles from Massive, so the
-    // axis should show time-of-day rather than a date that repeats per bar.
-    const bool intraday = m_timeframeCombo->currentData().toString() == QStringLiteral("1d");
-    m_axisX->setFormat(intraday ? QStringLiteral("h:mm ap") : QStringLiteral("MMM d"));
-
-    if (bars.isEmpty())
-        return;
-
-    double minPrice = std::numeric_limits<double>::max();
-    double maxPrice = std::numeric_limits<double>::lowest();
-    qint64 minMs = std::numeric_limits<qint64>::max();
-    qint64 maxMs = std::numeric_limits<qint64>::min();
-
+    QJsonArray candles;
+    QJsonArray line;
     for (const OhlcBar &bar : bars) {
         QDateTime dt = QDateTime::fromString(bar.date, Qt::ISODate);
         if (!dt.isValid())
-            dt = QDateTime::fromString(bar.date, "yyyy-MM-dd");
+            dt = QDateTime::fromString(bar.date, QStringLiteral("yyyy-MM-dd"));
         if (!dt.isValid())
             continue;
 
-        const qint64 ms = dt.toMSecsSinceEpoch();
-        m_series->append(static_cast<double>(ms), bar.close);
-        m_candlestickSeries->append(
-            new QCandlestickSet(bar.open, bar.high, bar.low, bar.close, static_cast<double>(ms)));
+        const qint64 timeSecs = dt.toSecsSinceEpoch();
 
-        minPrice = std::min({minPrice, bar.low, bar.close});
-        maxPrice = std::max({maxPrice, bar.high, bar.close});
-        minMs = std::min(minMs, ms);
-        maxMs = std::max(maxMs, ms);
+        QJsonObject candle;
+        candle["time"] = timeSecs;
+        candle["open"] = bar.open;
+        candle["high"] = bar.high;
+        candle["low"] = bar.low;
+        candle["close"] = bar.close;
+        candles.append(candle);
+
+        QJsonObject point;
+        point["time"] = timeSecs;
+        point["value"] = bar.close;
+        line.append(point);
     }
 
-    if (minMs > maxMs)
-        return;
-
-    const double padding = (maxPrice - minPrice) * 0.05;
-    m_axisY->setRange(minPrice - padding, maxPrice + padding);
-    m_axisX->setRange(QDateTime::fromMSecsSinceEpoch(minMs), QDateTime::fromMSecsSinceEpoch(maxMs));
+    const QString candlesJson = QString::fromUtf8(QJsonDocument(candles).toJson(QJsonDocument::Compact));
+    const QString lineJson = QString::fromUtf8(QJsonDocument(line).toJson(QJsonDocument::Compact));
+    runJs(QStringLiteral("window.setBars(%1, %2);").arg(candlesJson, lineJson));
 }
 
 void ChartPanel::applyChartTypeAvailability()
@@ -179,8 +141,7 @@ void ChartPanel::applyChartTypeAvailability()
         m_chartTypeCombo->blockSignals(true);
         m_chartTypeCombo->setCurrentIndex(0);
         m_chartTypeCombo->blockSignals(false);
-        m_series->setVisible(true);
-        m_candlestickSeries->setVisible(false);
+        runJs(QStringLiteral("window.setChartType('line');"));
     }
 }
 
@@ -192,6 +153,5 @@ void ChartPanel::onTimeframeChanged(int index)
 void ChartPanel::onChartTypeChanged(int index)
 {
     const bool wantsCandlestick = index == ChartTypeCandlestickIndex && m_ohlcAvailable;
-    m_series->setVisible(!wantsCandlestick);
-    m_candlestickSeries->setVisible(wantsCandlestick);
+    runJs(QStringLiteral("window.setChartType('%1');").arg(wantsCandlestick ? QStringLiteral("candlestick") : QStringLiteral("line")));
 }

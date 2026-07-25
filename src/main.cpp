@@ -10,6 +10,10 @@
 
 int main(int argc, char *argv[])
 {
+    // Required by QtWebEngineWidgets (used to render the TradingView chart in
+    // ChartPanel) before any QGuiApplication/QApplication is constructed.
+    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+
     QApplication app(argc, argv);
     app.setApplicationName(Config::ApplicationName);
     app.setOrganizationName(Config::OrganizationName);

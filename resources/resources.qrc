@@ -5,4 +5,8 @@
         <file>fonts/SpaceGrotesk.ttf</file>
         <file>fonts/JetBrainsMono.ttf</file>
     </qresource>
+    <qresource prefix="/tradingview">
+        <file alias="chart.html">tradingview/chart.html</file>
+        <file alias="lightweight-charts.js">tradingview/lightweight-charts.js</file>
+    </qresource>
 </RCC>

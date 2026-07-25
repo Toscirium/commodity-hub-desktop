@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #101113; overflow: hidden; }
+  #chart { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="chart"></div>
+<script src="qrc:/tradingview/lightweight-charts.js"></script>
+<script>
+// Colors mirror ChartPanel.cpp's kCardColor/kBorderColor/kGridColor/kMutedForeground/
+// kPositiveColor/kNegativeColor/kPrimaryColor so this matches the rest of the native
+// app's dark theme instead of picking its own palette.
+const COLORS = {
+  background: '#101113',
+  text: '#898d94',
+  grid: '#1d1e20',
+  border: '#27282b',
+  up: '#4cb782',
+  down: '#e74b4b',
+  line: '#7c3bed',
+};
+
+const container = document.getElementById('chart');
+const chart = LightweightCharts.createChart(container, {
+  layout: { background: { color: COLORS.background }, textColor: COLORS.text },
+  grid: {
+    vertLines: { color: COLORS.grid },
+    horzLines: { color: COLORS.grid },
+  },
+  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  timeScale: { borderColor: COLORS.border, timeVisible: true, secondsVisible: false },
+  rightPriceScale: { borderColor: COLORS.border },
+  width: container.clientWidth,
+  height: container.clientHeight,
+});
+
+const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+  upColor: COLORS.up,
+  downColor: COLORS.down,
+  wickUpColor: COLORS.up,
+  wickDownColor: COLORS.down,
+  borderUpColor: COLORS.up,
+  borderDownColor: COLORS.down,
+  visible: false,
+});
+
+const lineSeries = chart.addSeries(LightweightCharts.LineSeries, {
+  color: COLORS.line,
+  lineWidth: 2,
+  visible: true,
+});
+
+// C++ side (ChartPanel::setBars) calls this with two arrays already shaped
+// for lightweight-charts: candles as {time,open,high,low,close} and line as
+// {time,value}, both using Unix-seconds `time`.
+window.setBars = function(candles, line) {
+  candleSeries.setData(candles);
+  lineSeries.setData(line);
+  chart.timeScale().fitContent();
+};
+
+window.clearData = function() {
+  candleSeries.setData([]);
+  lineSeries.setData([]);
+};
+
+// type is 'line' or 'candlestick'.
+window.setChartType = function(type) {
+  candleSeries.applyOptions({ visible: type === 'candlestick' });
+  lineSeries.applyOptions({ visible: type === 'line' });
+};
+
+new ResizeObserver(() => {
+  chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+}).observe(container);
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@ if(WIN32)
     set(CMAKE_WIN32_EXECUTABLE ON)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Charts)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network WebEngineWidgets)
 
 if(QT_VERSION VERSION_GREATER_EQUAL 6.3)
     qt_standard_project_setup()
@@ -83,7 +83,7 @@ target_link_libraries(CommodityHubDesktop PRIVATE
     Qt6::Core
     Qt6::Widgets
     Qt6::Network
-    Qt6::Charts
+    Qt6::WebEngineWidgets
 )
 
 if(WIN32)

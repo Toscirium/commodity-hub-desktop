@@ -7,13 +7,12 @@
 
 class QLabel;
 class QComboBox;
-class QChart;
-class QChartView;
-class QLineSeries;
-class QCandlestickSeries;
-class QDateTimeAxis;
-class QValueAxis;
+class QWebEngineView;
 
+// Candlestick/line rendering is TradingView's lightweight-charts (vendored in
+// resources/tradingview/), run inside a QWebEngineView rather than Qt Charts —
+// see chart.html for the JS side of this. Everything outside the chart canvas
+// itself (title, timeframe/chart-type combos) stays plain Qt widgets.
 class ChartPanel : public QWidget
 {
     Q_OBJECT
@@ -29,20 +28,22 @@ signals:
 private slots:
     void onTimeframeChanged(int index);
     void onChartTypeChanged(int index);
+    void onPageLoadFinished(bool ok);
 
 private:
     void applyChartTypeAvailability();
+    // Queues js until the page has finished loading (setBars()/setCommodityName()
+    // can be called before that, e.g. while the very first OHLC fetch races the
+    // WebEngine page load), then runs it immediately once ready.
+    void runJs(const QString &js);
 
     QString m_commodityName;
     bool m_ohlcAvailable = true;
+    bool m_pageReady = false;
+    QVector<QString> m_pendingJs;
 
     QLabel *m_titleLabel;
     QComboBox *m_timeframeCombo;
     QComboBox *m_chartTypeCombo;
-    QChartView *m_chartView;
-    QChart *m_chart;
-    QLineSeries *m_series;
-    QCandlestickSeries *m_candlestickSeries;
-    QDateTimeAxis *m_axisX;
-    QValueAxis *m_axisY;
+    QWebEngineView *m_webView;
 };
