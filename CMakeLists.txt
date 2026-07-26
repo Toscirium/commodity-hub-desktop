@@ -36,10 +36,14 @@ set(APP_SOURCES
     src/models/PortfolioPosition.cpp
     src/models/PriceAlert.h
     src/models/PriceAlert.cpp
+    src/models/NewsArticle.h
+    src/models/NewsArticle.cpp
     src/services/CommodityService.h
     src/services/CommodityService.cpp
     src/services/OhlcService.h
     src/services/OhlcService.cpp
+    src/services/NewsService.h
+    src/services/NewsService.cpp
     src/services/WatchlistService.h
     src/services/WatchlistService.cpp
     src/services/PortfolioService.h
@@ -58,6 +62,8 @@ set(APP_SOURCES
     src/ui/CategoryHeaderWidget.cpp
     src/ui/ChartPanel.h
     src/ui/ChartPanel.cpp
+    src/ui/NewsPanel.h
+    src/ui/NewsPanel.cpp
     src/ui/DashboardPanel.h
     src/ui/DashboardPanel.cpp
     src/ui/PortfolioPanel.h

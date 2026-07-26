@@ -27,17 +27,20 @@
 #include "ChartPanel.h"
 #include "DashboardPanel.h"
 #include "LoginDialog.h"
+#include "NewsPanel.h"
 #include "PortfolioPanel.h"
 #include "WatchlistPanel.h"
 #include "core/Config.h"
 #include "core/Session.h"
 #include "core/SupabaseClient.h"
+#include "models/NewsArticle.h"
 #include "models/OhlcBar.h"
 #include "models/Portfolio.h"
 #include "models/PortfolioPosition.h"
 #include "models/PriceAlert.h"
 #include "models/Watchlist.h"
 #include "services/CommodityService.h"
+#include "services/NewsService.h"
 #include "services/OhlcService.h"
 #include "services/PortfolioService.h"
 #include "services/PriceAlertService.h"
@@ -85,6 +88,7 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
 {
     m_commodityService = new CommodityService(m_client, this);
     m_ohlcService = new OhlcService(m_client, this);
+    m_newsService = new NewsService(m_client, this);
     m_watchlistService = new WatchlistService(m_client, m_session, this);
     m_portfolioService = new PortfolioService(m_client, m_session, this);
     m_priceAlertService = new PriceAlertService(m_client, m_session, this);
@@ -129,6 +133,14 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
             });
     connect(m_ohlcService, &OhlcService::errorOccurred, this,
             [this](const QString &msg) { showError(tr("Chart"), msg); });
+
+    connect(m_newsService, &NewsService::newsLoaded, this,
+            [this](const QString &name, const QVector<NewsArticle> &articles) {
+                m_watchlistPanel->newsPanel()->setArticles(name, articles);
+            });
+    connect(m_newsService, &NewsService::errorOccurred, this, [this](const QString &msg) {
+        m_watchlistPanel->newsPanel()->setError(m_selectedCommodity, msg);
+    });
 
     connect(m_portfolioService, &PortfolioService::portfoliosLoaded, this,
             [this](const QVector<Portfolio> &portfolios) {
@@ -357,6 +369,9 @@ void MainWindow::onCommoditySelected(const QString &commodityName)
     m_selectedCommodity = commodityName;
     m_watchlistPanel->chartPanel()->setCommodityName(commodityName);
     m_ohlcService->fetchHistory(commodityName, m_selectedTimeframe);
+
+    m_watchlistPanel->newsPanel()->setCommodityName(commodityName);
+    m_newsService->fetchNews(commodityName);
 }
 
 void MainWindow::selectCommodityAndShowChart(const QString &commodityName)

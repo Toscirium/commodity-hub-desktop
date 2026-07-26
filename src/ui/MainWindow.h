@@ -9,6 +9,7 @@ class Session;
 class SupabaseClient;
 class CommodityService;
 class OhlcService;
+class NewsService;
 class WatchlistService;
 class PortfolioService;
 class PriceAlertService;
@@ -69,6 +70,7 @@ private:
     SupabaseClient &m_client;
     CommodityService *m_commodityService;
     OhlcService *m_ohlcService;
+    NewsService *m_newsService;
     WatchlistService *m_watchlistService;
     PortfolioService *m_portfolioService;
     PriceAlertService *m_priceAlertService;

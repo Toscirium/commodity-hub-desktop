@@ -37,6 +37,11 @@ CommodityCardWidget::CommodityCardWidget(QWidget *parent)
     m_changeLabel = new QLabel(this);
     m_changeLabel->setFont(QFont(QStringLiteral("JetBrains Mono"), 11, QFont::DemiBold));
 
+    m_expandIcon = new QLabel(QStringLiteral("▼"), this); // ▼, flips to ▲ when expanded
+    m_expandIcon->setStyleSheet(QStringLiteral("QLabel { color: #898d94; }"));
+    m_expandIcon->setAlignment(Qt::AlignCenter);
+    m_expandIcon->setFixedWidth(20);
+
     auto *badgeRow = new QHBoxLayout;
     badgeRow->setSpacing(6);
     badgeRow->addWidget(m_nameLabel);
@@ -60,6 +65,7 @@ CommodityCardWidget::CommodityCardWidget(QWidget *parent)
     layout->setSpacing(12);
     layout->addWidget(m_iconLabel);
     layout->addLayout(textColumn, 1);
+    layout->addWidget(m_expandIcon);
 }
 
 void CommodityCardWidget::setCommodity(const Commodity &commodity)
@@ -78,4 +84,9 @@ void CommodityCardWidget::setCommodity(const Commodity &commodity)
                                      positive ? "+" : "", QString::number(commodity.changePercent, 'f', 2)));
     m_changeLabel->setStyleSheet(
         QStringLiteral("QLabel { color: %1; }").arg((positive ? kPositiveColor : kNegativeColor).name()));
+}
+
+void CommodityCardWidget::setExpanded(bool expanded)
+{
+    m_expandIcon->setText(expanded ? QStringLiteral("▲") : QStringLiteral("▼"));
 }

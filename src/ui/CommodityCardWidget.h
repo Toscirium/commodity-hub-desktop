@@ -18,6 +18,9 @@ public:
     explicit CommodityCardWidget(QWidget *parent = nullptr);
 
     void setCommodity(const Commodity &commodity);
+    // Chevron indicator reflecting whether this card's chart/news are
+    // currently shown below it (see WatchlistPanel's click-to-toggle).
+    void setExpanded(bool expanded);
 
 private:
     QLabel *m_iconLabel;
@@ -26,4 +29,5 @@ private:
     QLabel *m_exchangeBadge;
     QLabel *m_priceLabel;
     QLabel *m_changeLabel;
+    QLabel *m_expandIcon;
 };

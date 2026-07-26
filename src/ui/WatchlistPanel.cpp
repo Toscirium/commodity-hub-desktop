@@ -14,6 +14,7 @@
 #include "CategoryHeaderWidget.h"
 #include "ChartPanel.h"
 #include "CommodityCardWidget.h"
+#include "NewsPanel.h"
 
 namespace {
 QString capitalize(const QString &text)
@@ -48,10 +49,13 @@ WatchlistPanel::WatchlistPanel(QWidget *parent)
     m_removeButton = new QPushButton(tr("Remove"), this);
     m_removeButton->setObjectName(QStringLiteral("destructiveButton"));
 
-    // Embedded inline in m_list, directly under whichever card is selected
-    // (see showChartBelowItem), rather than living in a side-by-side panel.
+    // Both embedded inline in m_list, stacked directly under whichever card
+    // is expanded (see showDetailsBelowItem), rather than living in a
+    // side-by-side panel.
     m_chartPanel = new ChartPanel(this);
     m_chartPanel->setMinimumHeight(380);
+    m_newsPanel = new NewsPanel(this);
+    m_newsPanel->setMinimumHeight(340);
 
     auto *watchlistRow = new QHBoxLayout;
     watchlistRow->addWidget(m_watchlistCombo, 1);
@@ -73,7 +77,8 @@ WatchlistPanel::WatchlistPanel(QWidget *parent)
 
     connect(m_watchlistCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             &WatchlistPanel::onWatchlistChanged);
-    connect(m_list, &QListWidget::currentRowChanged, this, &WatchlistPanel::onRowActivated);
+    connect(m_list, &QListWidget::itemClicked, this, &WatchlistPanel::onCardClicked);
+    connect(m_list, &QListWidget::itemActivated, this, &WatchlistPanel::onCardClicked);
     connect(m_addButton, &QPushButton::clicked, this, &WatchlistPanel::onAddClicked);
     connect(m_removeButton, &QPushButton::clicked, this, &WatchlistPanel::onRemoveClicked);
     connect(m_newWatchlistButton, &QPushButton::clicked, this, &WatchlistPanel::onNewWatchlistClicked);
@@ -182,7 +187,7 @@ void WatchlistPanel::refreshModel()
         m_subtitle->setText(tr("Track the commodities you care about"));
     }
 
-    detachChartPanel();
+    detachDetailsPanels();
     m_list->clear();
 
     int firstCardListRow = -1;
@@ -244,10 +249,12 @@ void WatchlistPanel::refreshModel()
         }
     }
 
+    m_expandedRowIndex = -1;
     m_removeButton->setEnabled(false);
-
-    if (firstCardListRow >= 0)
+    if (firstCardListRow >= 0) {
         m_list->setCurrentRow(firstCardListRow);
+        toggleRow(m_list->item(firstCardListRow));
+    }
 }
 
 void WatchlistPanel::onWatchlistChanged(int)
@@ -256,12 +263,17 @@ void WatchlistPanel::onWatchlistChanged(int)
         refreshModel();
 }
 
-void WatchlistPanel::onRowActivated(int row)
+void WatchlistPanel::onCardClicked(QListWidgetItem *item)
 {
-    // Category header rows carry no UserRole index (see refreshModel) and are
-    // Qt::NoItemFlags, so this also naturally no-ops if one somehow becomes current.
-    QListWidgetItem *item = m_list->item(row);
-    const QVariant data = item ? item->data(Qt::UserRole) : QVariant();
+    toggleRow(item);
+}
+
+void WatchlistPanel::toggleRow(QListWidgetItem *cardItem)
+{
+    // Category header rows and the chart/news details row itself carry no
+    // UserRole index (see refreshModel/showDetailsBelowItem) and are
+    // Qt::NoItemFlags, so this naturally no-ops if one somehow gets clicked.
+    const QVariant data = cardItem ? cardItem->data(Qt::UserRole) : QVariant();
     if (!data.isValid())
         return;
 
@@ -269,57 +281,96 @@ void WatchlistPanel::onRowActivated(int row)
     if (rowIndex < 0 || rowIndex >= m_rows.size())
         return;
 
-    emit commoditySelected(m_rows.at(rowIndex).commodity.name);
+    m_list->setCurrentItem(cardItem);
+
+    if (rowIndex == m_expandedRowIndex) {
+        // Same card clicked again — collapse.
+        detachDetailsPanels();
+        setCardExpanded(m_expandedRowIndex, false);
+        m_expandedRowIndex = -1;
+        m_removeButton->setEnabled(false);
+        return;
+    }
+
+    setCardExpanded(m_expandedRowIndex, false);
+    m_expandedRowIndex = rowIndex;
+    setCardExpanded(rowIndex, true);
+
     // Nothing to remove for a browsed (not-yet-watchlisted) commodity.
     m_removeButton->setEnabled(m_mode == Mode::MyWatchlist);
 
-    showChartBelowItem(item);
+    emit commoditySelected(m_rows.at(rowIndex).commodity.name);
+    showDetailsBelowItem(cardItem);
 }
 
-void WatchlistPanel::showChartBelowItem(QListWidgetItem *cardItem)
+CommodityCardWidget *WatchlistPanel::cardWidgetForRow(int rowIndex) const
 {
-    if (m_chartItem) {
-        // Pull the persistent chart panel out before the old row (and the
-        // disposable container widget holding it) gets destroyed.
-        m_chartPanel->setParent(this);
-        delete m_list->takeItem(m_list->row(m_chartItem));
-        m_chartItem = nullptr;
+    for (int i = 0; i < m_list->count(); ++i) {
+        QListWidgetItem *item = m_list->item(i);
+        const QVariant data = item->data(Qt::UserRole);
+        if (data.isValid() && data.toInt() == rowIndex)
+            return qobject_cast<CommodityCardWidget *>(m_list->itemWidget(item));
     }
+    return nullptr;
+}
 
-    auto *chartItem = new QListWidgetItem;
-    chartItem->setFlags(Qt::NoItemFlags);
-    chartItem->setSizeHint(QSize(0, 380));
-    m_list->insertItem(m_list->row(cardItem) + 1, chartItem);
+void WatchlistPanel::setCardExpanded(int rowIndex, bool expanded)
+{
+    if (rowIndex < 0)
+        return;
+    if (CommodityCardWidget *card = cardWidgetForRow(rowIndex))
+        card->setExpanded(expanded);
+}
+
+void WatchlistPanel::showDetailsBelowItem(QListWidgetItem *cardItem)
+{
+    // Pull the persistent chart/news panels out before the old row (and the
+    // disposable container widget holding them) gets destroyed.
+    detachDetailsPanels();
+
+    auto *detailsItem = new QListWidgetItem;
+    detailsItem->setFlags(Qt::NoItemFlags);
+    detailsItem->setSizeHint(QSize(0, 740));
+    m_list->insertItem(m_list->row(cardItem) + 1, detailsItem);
 
     // QAbstractItemView::setItemWidget()/removeItemWidget() schedule the
     // *previous* index widget for deleteLater() whenever it's replaced or
-    // cleared - it does not just "detach" it. Since m_chartPanel is reused
-    // across rows, it must never be handed to setItemWidget() directly (that
-    // would get it deleted out from under us on the next event loop tick,
-    // leaving MainWindow's async OHLC callback writing into freed memory).
-    // Give the view a disposable container instead, and always reparent
-    // m_chartPanel back out of it before the container can be torn down.
+    // cleared - it does not just "detach" it. Since m_chartPanel/m_newsPanel
+    // are reused across rows, they must never be handed to setItemWidget()
+    // directly (that would get them deleted out from under us on the next
+    // event loop tick, leaving async OHLC/news callbacks writing into freed
+    // memory). Give the view a disposable container instead, and always
+    // reparent the real panels back out of it before the container is torn
+    // down (see detachDetailsPanels()).
     auto *container = new QWidget;
     container->setAttribute(Qt::WA_StyledBackground, true);
     auto *containerLayout = new QVBoxLayout(container);
     containerLayout->setContentsMargins(0, 0, 0, 0);
+    containerLayout->setSpacing(12);
     m_chartPanel->setParent(container);
+    m_newsPanel->setParent(container);
     containerLayout->addWidget(m_chartPanel);
-    m_list->setItemWidget(chartItem, container);
+    containerLayout->addWidget(m_newsPanel);
+    m_list->setItemWidget(detailsItem, container);
     m_chartPanel->show();
-    m_chartItem = chartItem;
+    m_newsPanel->show();
+    m_detailsItem = detailsItem;
 }
 
-void WatchlistPanel::detachChartPanel()
+void WatchlistPanel::detachDetailsPanels()
 {
-    if (!m_chartItem)
+    if (!m_detailsItem)
         return;
 
-    // Reparent the persistent chart panel out of its disposable container
-    // widget before that container (and the row it lives on) is destroyed.
+    // Reparent the persistent chart/news panels out of their disposable
+    // container widget before that container (and the row it lives on) is
+    // destroyed.
     m_chartPanel->setParent(this);
     m_chartPanel->hide();
-    m_chartItem = nullptr;
+    m_newsPanel->setParent(this);
+    m_newsPanel->hide();
+    delete m_list->takeItem(m_list->row(m_detailsItem));
+    m_detailsItem = nullptr;
 }
 
 void WatchlistPanel::onAddClicked()
@@ -333,16 +384,10 @@ void WatchlistPanel::onAddClicked()
 
 void WatchlistPanel::onRemoveClicked()
 {
-    QListWidgetItem *item = m_list->item(m_list->currentRow());
-    const QVariant data = item ? item->data(Qt::UserRole) : QVariant();
-    if (!data.isValid())
+    if (m_expandedRowIndex < 0 || m_expandedRowIndex >= m_rows.size() || m_rows.at(m_expandedRowIndex).itemId.isEmpty())
         return;
 
-    const int rowIndex = data.toInt();
-    if (rowIndex < 0 || rowIndex >= m_rows.size() || m_rows.at(rowIndex).itemId.isEmpty())
-        return;
-
-    emit removeItemRequested(m_rows.at(rowIndex).itemId);
+    emit removeItemRequested(m_rows.at(m_expandedRowIndex).itemId);
 }
 
 void WatchlistPanel::onNewWatchlistClicked()
