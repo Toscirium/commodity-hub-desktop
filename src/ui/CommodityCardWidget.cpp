@@ -61,8 +61,8 @@ CommodityCardWidget::CommodityCardWidget(QWidget *parent)
     textColumn->addLayout(priceRow);
 
     auto *layout = new QHBoxLayout(this);
-    layout->setContentsMargins(12, 10, 12, 10);
-    layout->setSpacing(12);
+    layout->setContentsMargins(12, 8, 12, 8);
+    layout->setSpacing(10);
     layout->addWidget(m_iconLabel);
     layout->addLayout(textColumn, 1);
     layout->addWidget(m_expandIcon);

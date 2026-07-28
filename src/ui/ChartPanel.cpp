@@ -53,8 +53,8 @@ ChartPanel::ChartPanel(QWidget *parent)
     headerRow->addWidget(m_timeframeCombo);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
+    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setSpacing(8);
     layout->addLayout(headerRow);
     layout->addWidget(m_webView, 1);
 

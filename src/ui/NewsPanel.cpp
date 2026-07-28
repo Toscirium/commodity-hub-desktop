@@ -42,7 +42,7 @@ NewsPanel::NewsPanel(QWidget *parent)
     articlesContainer->setAttribute(Qt::WA_StyledBackground, false);
     m_articlesLayout = new QVBoxLayout(articlesContainer);
     m_articlesLayout->setContentsMargins(0, 0, 0, 0);
-    m_articlesLayout->setSpacing(14);
+    m_articlesLayout->setSpacing(10);
 
     // Fixed-height scroll region rather than letting the article list grow
     // this widget arbitrarily tall: the details row it lives in (see
@@ -51,12 +51,12 @@ NewsPanel::NewsPanel(QWidget *parent)
     auto *scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setFixedHeight(260);
+    scrollArea->setFixedHeight(180);
     scrollArea->setWidget(articlesContainer);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
+    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setSpacing(8);
     layout->addWidget(m_titleLabel);
     layout->addWidget(m_statusLabel);
     layout->addWidget(scrollArea);

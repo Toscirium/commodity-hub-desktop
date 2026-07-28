@@ -222,7 +222,7 @@ void MainWindow::setupUi()
     appNameColumn->addWidget(appTaglineLabel);
 
     auto *sidebarHeaderRow = new QHBoxLayout;
-    sidebarHeaderRow->setContentsMargins(16, 16, 16, 12);
+    sidebarHeaderRow->setContentsMargins(14, 14, 14, 10);
     sidebarHeaderRow->setSpacing(10);
     sidebarHeaderRow->addWidget(logoTile);
     sidebarHeaderRow->addLayout(appNameColumn, 1);
@@ -234,6 +234,7 @@ void MainWindow::setupUi()
     m_navList->setObjectName(QStringLiteral("navRail"));
     m_navList->setFrameShape(QFrame::NoFrame);
     m_navList->setFixedWidth(220);
+    m_navList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     auto *sidebarColumn = new QVBoxLayout;
     sidebarColumn->setContentsMargins(0, 0, 0, 0);

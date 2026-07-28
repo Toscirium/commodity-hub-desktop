@@ -112,7 +112,7 @@ QLineEdit, QComboBox, QSpinBox {
     background-color: #1a1b1e; /* --secondary */
     border: 1px solid #27282b; /* --border / --input */
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 5px 10px;
     color: #e5e7eb;
     selection-background-color: #7c3bed;
 }
@@ -145,7 +145,7 @@ QPushButton {
     background-color: #7c3bed; /* --primary */
     border: none;
     border-radius: 8px;
-    padding: 7px 16px;
+    padding: 6px 14px;
     color: #ffffff;
     font-weight: 500;
 }
@@ -268,9 +268,9 @@ QListWidget#navRail {
 }
 
 QListWidget#navRail::item {
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: 8px;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     color: #898d94;
 }
 
@@ -291,7 +291,7 @@ QListWidget#navRail::item:disabled {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.4px;
-    padding-top: 16px;
+    padding-top: 12px;
     padding-bottom: 2px;
     background: transparent;
 }

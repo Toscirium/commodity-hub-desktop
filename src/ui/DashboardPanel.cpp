@@ -19,7 +19,7 @@ QLabel *makeStatTile(QWidget *parent)
     label->setObjectName(QStringLiteral("card"));
     label->setAttribute(Qt::WA_StyledBackground, true);
     label->setTextFormat(Qt::RichText);
-    label->setMargin(14);
+    label->setMargin(11);
     return label;
 }
 
@@ -66,6 +66,7 @@ DashboardPanel::DashboardPanel(QWidget *parent)
     m_watchlistItemsLabel = makeStatTile(this);
 
     auto *statsGrid = new QGridLayout;
+    statsGrid->setSpacing(10);
     statsGrid->addWidget(m_portfolioValueLabel, 0, 0);
     statsGrid->addWidget(m_portfolioReturnLabel, 0, 1);
     statsGrid->addWidget(m_activeAlertsLabel, 0, 2);
@@ -75,27 +76,32 @@ DashboardPanel::DashboardPanel(QWidget *parent)
     gainersHeading->setObjectName(QStringLiteral("panelHeading"));
     m_gainersList = new QListWidget(this);
     m_gainersList->setFrameShape(QFrame::NoFrame);
+    m_gainersList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     auto *losersHeading = new QLabel(tr("Top Losers"), this);
     losersHeading->setObjectName(QStringLiteral("panelHeading"));
     m_losersList = new QListWidget(this);
     m_losersList->setFrameShape(QFrame::NoFrame);
+    m_losersList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     auto *gainersColumn = new QVBoxLayout;
+    gainersColumn->setSpacing(6);
     gainersColumn->addWidget(gainersHeading);
     gainersColumn->addWidget(m_gainersList, 1);
 
     auto *losersColumn = new QVBoxLayout;
+    losersColumn->setSpacing(6);
     losersColumn->addWidget(losersHeading);
     losersColumn->addWidget(m_losersList, 1);
 
     auto *moversRow = new QHBoxLayout;
+    moversRow->setSpacing(10);
     moversRow->addLayout(gainersColumn);
     moversRow->addLayout(losersColumn);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(14);
+    layout->setContentsMargins(14, 14, 14, 14);
+    layout->setSpacing(10);
     layout->addLayout(headerRow);
     layout->addLayout(statsGrid);
     layout->addLayout(moversRow, 1);

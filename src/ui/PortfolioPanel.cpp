@@ -40,7 +40,7 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     for (QLabel *label : {m_totalValueLabel, m_totalCostLabel, m_totalReturnLabel}) {
         label->setObjectName(QStringLiteral("card"));
         label->setAttribute(Qt::WA_StyledBackground, true);
-        label->setMargin(12);
+        label->setMargin(10);
     }
 
     m_model = new PortfolioTableModel(this);
@@ -54,6 +54,8 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     m_tableView->setAlternatingRowColors(true);
     m_tableView->setShowGrid(false);
     m_tableView->setFrameShape(QFrame::NoFrame);
+    m_tableView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_tableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     m_emptyLabel = new QLabel(tr("No positions yet — click “Add Position” to get started."), this);
     m_emptyLabel->setObjectName(QStringLiteral("emptyState"));
@@ -74,6 +76,7 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     portfolioRow->addWidget(m_newPortfolioButton);
 
     auto *summaryRow = new QHBoxLayout;
+    summaryRow->setSpacing(10);
     summaryRow->addWidget(m_totalValueLabel, 1);
     summaryRow->addWidget(m_totalCostLabel, 1);
     summaryRow->addWidget(m_totalReturnLabel, 1);
@@ -85,8 +88,8 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     buttonRow->addStretch(1);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
+    layout->setContentsMargins(14, 14, 14, 14);
+    layout->setSpacing(8);
     layout->addWidget(heading);
     layout->addWidget(subtitle);
     layout->addLayout(portfolioRow);

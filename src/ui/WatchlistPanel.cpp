@@ -44,6 +44,11 @@ WatchlistPanel::WatchlistPanel(QWidget *parent)
     m_list = new QListWidget(this);
     m_list->setFrameShape(QFrame::NoFrame);
     m_list->setSpacing(6);
+    // Default per-item wheel/trackpad scrolling jumps a whole row at a time,
+    // which feels far jankier than the fling-smooth scrolling on mobile —
+    // per-pixel mode tracks the actual (often high-resolution) wheel delta.
+    m_list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_list->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_list->setSelectionMode(QAbstractItemView::SingleSelection);
     m_addButton = new QPushButton(tr("Add"), this);
     m_removeButton = new QPushButton(tr("Remove"), this);
@@ -53,9 +58,9 @@ WatchlistPanel::WatchlistPanel(QWidget *parent)
     // is expanded (see showDetailsBelowItem), rather than living in a
     // side-by-side panel.
     m_chartPanel = new ChartPanel(this);
-    m_chartPanel->setMinimumHeight(380);
+    m_chartPanel->setMinimumHeight(260);
     m_newsPanel = new NewsPanel(this);
-    m_newsPanel->setMinimumHeight(340);
+    m_newsPanel->setMinimumHeight(220);
 
     auto *watchlistRow = new QHBoxLayout;
     watchlistRow->addWidget(m_watchlistCombo, 1);
@@ -66,8 +71,8 @@ WatchlistPanel::WatchlistPanel(QWidget *parent)
     addRow->addWidget(m_addButton);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
+    layout->setContentsMargins(14, 14, 14, 14);
+    layout->setSpacing(8);
     layout->addWidget(m_heading);
     layout->addWidget(m_subtitle);
     layout->addLayout(watchlistRow);
@@ -330,7 +335,7 @@ void WatchlistPanel::showDetailsBelowItem(QListWidgetItem *cardItem)
 
     auto *detailsItem = new QListWidgetItem;
     detailsItem->setFlags(Qt::NoItemFlags);
-    detailsItem->setSizeHint(QSize(0, 740));
+    detailsItem->setSizeHint(QSize(0, 530));
     m_list->insertItem(m_list->row(cardItem) + 1, detailsItem);
 
     // QAbstractItemView::setItemWidget()/removeItemWidget() schedule the
@@ -346,7 +351,7 @@ void WatchlistPanel::showDetailsBelowItem(QListWidgetItem *cardItem)
     container->setAttribute(Qt::WA_StyledBackground, true);
     auto *containerLayout = new QVBoxLayout(container);
     containerLayout->setContentsMargins(0, 0, 0, 0);
-    containerLayout->setSpacing(12);
+    containerLayout->setSpacing(8);
     m_chartPanel->setParent(container);
     m_newsPanel->setParent(container);
     containerLayout->addWidget(m_chartPanel);

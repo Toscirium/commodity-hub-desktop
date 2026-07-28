@@ -33,6 +33,8 @@ AlertsPanel::AlertsPanel(QWidget *parent)
     m_tableView->setAlternatingRowColors(true);
     m_tableView->setShowGrid(false);
     m_tableView->setFrameShape(QFrame::NoFrame);
+    m_tableView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_tableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     m_emptyLabel = new QLabel(tr("No price alerts yet — click “New Alert” to get notified when a commodity "
                                   "crosses a price you care about."),
@@ -51,7 +53,8 @@ AlertsPanel::AlertsPanel(QWidget *parent)
     m_triggersHeading->setObjectName(QStringLiteral("panelHeading"));
     m_triggersList = new QListWidget(this);
     m_triggersList->setFrameShape(QFrame::NoFrame);
-    m_triggersList->setMaximumHeight(160);
+    m_triggersList->setMaximumHeight(140);
+    m_triggersList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     auto *buttonRow = new QHBoxLayout;
     buttonRow->addWidget(m_newAlertButton);
@@ -59,8 +62,8 @@ AlertsPanel::AlertsPanel(QWidget *parent)
     buttonRow->addStretch(1);
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
+    layout->setContentsMargins(14, 14, 14, 14);
+    layout->setSpacing(8);
     layout->addWidget(heading);
     layout->addWidget(subtitle);
     layout->addWidget(m_tableView, 1);
