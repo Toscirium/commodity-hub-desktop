@@ -82,6 +82,10 @@ set(APP_SOURCES
     src/ui/AddAlertDialog.cpp
     src/ui/SpreadCalculatorPanel.h
     src/ui/SpreadCalculatorPanel.cpp
+    src/ui/CommodityTableModel.h
+    src/ui/CommodityTableModel.cpp
+    src/ui/ScreenerPanel.h
+    src/ui/ScreenerPanel.cpp
     resources/resources.qrc
 )
 

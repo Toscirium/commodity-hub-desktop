@@ -31,6 +31,7 @@
 #include "LoginDialog.h"
 #include "NewsPanel.h"
 #include "PortfolioPanel.h"
+#include "ScreenerPanel.h"
 #include "SpreadCalculatorPanel.h"
 #include "WatchlistPanel.h"
 #include "core/Config.h"
@@ -55,6 +56,7 @@ constexpr int PageWatchlist = 1;
 constexpr int PagePortfolio = 2;
 constexpr int PageAlerts = 3;
 constexpr int PageSpreadCalculator = 4;
+constexpr int PageScreener = 5;
 
 QSettings makeSettings()
 {
@@ -113,6 +115,7 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
                 m_alertsPanel->setCommodities(commodities);
                 m_dashboardPanel->setCommodities(commodities);
                 m_spreadCalculatorPanel->setCommodities(commodities);
+                m_screenerPanel->setCommodities(commodities);
                 rebuildNavList();
             });
     connect(m_commodityService, &CommodityService::errorOccurred, this, [this](const QString &msg) {
@@ -184,6 +187,7 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
     connect(m_watchlistPanel->chartPanel(), &ChartPanel::timeframeChanged, this, &MainWindow::onTimeframeChanged);
 
     connect(m_dashboardPanel, &DashboardPanel::commoditySelected, this, &MainWindow::selectCommodityAndShowChart);
+    connect(m_screenerPanel, &ScreenerPanel::commoditySelected, this, &MainWindow::selectCommodityAndShowChart);
 
     connect(m_portfolioPanel, &PortfolioPanel::portfolioSelected, m_portfolioService,
             &PortfolioService::fetchPositions);
@@ -253,6 +257,7 @@ void MainWindow::setupUi()
     m_portfolioPanel = new PortfolioPanel(this);
     m_alertsPanel = new AlertsPanel(this);
     m_spreadCalculatorPanel = new SpreadCalculatorPanel(this);
+    m_screenerPanel = new ScreenerPanel(this);
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(m_dashboardPanel);
@@ -260,6 +265,7 @@ void MainWindow::setupUi()
     m_pages->addWidget(m_portfolioPanel);
     m_pages->addWidget(m_alertsPanel);
     m_pages->addWidget(m_spreadCalculatorPanel);
+    m_pages->addWidget(m_screenerPanel);
 
     connect(m_navList, &QListWidget::currentRowChanged, this, &MainWindow::onNavRowChanged);
 
@@ -329,6 +335,7 @@ void MainWindow::setupMenu()
         {"&Portfolio", PagePortfolio, Qt::Key_3},
         {"&Alerts", PageAlerts, Qt::Key_4},
         {"&Spread Calculator", PageSpreadCalculator, Qt::Key_5},
+        {"S&creener", PageScreener, Qt::Key_6},
     };
     for (const NavShortcut &nav : navShortcuts) {
         QAction *action = viewMenu->addAction(tr(nav.label));
@@ -518,6 +525,7 @@ void MainWindow::rebuildNavList()
     addPage(QStringLiteral("\U0001F4BC"), tr("Portfolio"), PagePortfolio);
     addPage(QStringLiteral("\U0001F514"), tr("Alerts"), PageAlerts);
     addPage(QStringLiteral("\U0001F9EE"), tr("Spread Calculator"), PageSpreadCalculator);
+    addPage(QStringLiteral("\U0001F50D"), tr("Screener"), PageScreener);
 
     addHeader(tr("PRO"));
     addPlaceholder(QStringLiteral("\U0001F4CA"), tr("Analytics Workspace"));

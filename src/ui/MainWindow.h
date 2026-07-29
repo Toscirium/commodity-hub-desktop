@@ -20,6 +20,7 @@ class DashboardPanel;
 class PortfolioPanel;
 class AlertsPanel;
 class SpreadCalculatorPanel;
+class ScreenerPanel;
 class QListWidget;
 class QListWidgetItem;
 class QStackedWidget;
@@ -90,6 +91,7 @@ private:
     PortfolioPanel *m_portfolioPanel;
     AlertsPanel *m_alertsPanel;
     SpreadCalculatorPanel *m_spreadCalculatorPanel;
+    ScreenerPanel *m_screenerPanel;
 
     QProgressBar *m_loadingIndicator;
     QLabel *m_errorBanner;
