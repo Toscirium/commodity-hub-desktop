@@ -4,6 +4,7 @@
         <file>fonts/DMSans.ttf</file>
         <file>fonts/SpaceGrotesk.ttf</file>
         <file>fonts/JetBrainsMono.ttf</file>
+        <file>icons/app.png</file>
     </qresource>
     <qresource prefix="/tradingview">
         <file alias="chart.html">tradingview/chart.html</file>

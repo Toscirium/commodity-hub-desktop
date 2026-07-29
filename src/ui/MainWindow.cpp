@@ -11,6 +11,7 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
+#include <QIcon>
 #include <QMouseEvent>
 #include <QPair>
 #include <QProgressBar>
@@ -18,6 +19,7 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QStringList>
+#include <QSystemTrayIcon>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
@@ -29,6 +31,7 @@
 #include "LoginDialog.h"
 #include "NewsPanel.h"
 #include "PortfolioPanel.h"
+#include "SpreadCalculatorPanel.h"
 #include "WatchlistPanel.h"
 #include "core/Config.h"
 #include "core/Session.h"
@@ -51,6 +54,7 @@ constexpr int PageOverview = 0;
 constexpr int PageWatchlist = 1;
 constexpr int PagePortfolio = 2;
 constexpr int PageAlerts = 3;
+constexpr int PageSpreadCalculator = 4;
 
 QSettings makeSettings()
 {
@@ -95,6 +99,7 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
 
     setupUi();
     setupMenu();
+    setupTrayIcon();
     restoreWindowState();
 
     setWindowTitle(QStringLiteral("%1 — %2").arg(Config::ApplicationName, m_session.email()));
@@ -107,6 +112,7 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
                 m_portfolioPanel->setCommodities(commodities);
                 m_alertsPanel->setCommodities(commodities);
                 m_dashboardPanel->setCommodities(commodities);
+                m_spreadCalculatorPanel->setCommodities(commodities);
                 rebuildNavList();
             });
     connect(m_commodityService, &CommodityService::errorOccurred, this, [this](const QString &msg) {
@@ -163,7 +169,7 @@ MainWindow::MainWindow(Session &session, SupabaseClient &client, QWidget *parent
                 m_alertsPanel->setAlerts(alerts);
                 m_dashboardPanel->setAlerts(alerts);
             });
-    connect(m_priceAlertService, &PriceAlertService::triggersLoaded, m_alertsPanel, &AlertsPanel::setTriggers);
+    connect(m_priceAlertService, &PriceAlertService::triggersLoaded, this, &MainWindow::onTriggersLoaded);
     connect(m_priceAlertService, &PriceAlertService::errorOccurred, this, [this](const QString &msg) {
         endRequest();
         showError(tr("Alerts"), msg);
@@ -246,12 +252,14 @@ void MainWindow::setupUi()
     m_watchlistPanel = new WatchlistPanel(this);
     m_portfolioPanel = new PortfolioPanel(this);
     m_alertsPanel = new AlertsPanel(this);
+    m_spreadCalculatorPanel = new SpreadCalculatorPanel(this);
 
     m_pages = new QStackedWidget(this);
     m_pages->addWidget(m_dashboardPanel);
     m_pages->addWidget(m_watchlistPanel);
     m_pages->addWidget(m_portfolioPanel);
     m_pages->addWidget(m_alertsPanel);
+    m_pages->addWidget(m_spreadCalculatorPanel);
 
     connect(m_navList, &QListWidget::currentRowChanged, this, &MainWindow::onNavRowChanged);
 
@@ -306,7 +314,7 @@ void MainWindow::setupMenu()
 
     QAction *exitAction = fileMenu->addAction(tr("E&xit"));
     exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    connect(exitAction, &QAction::triggered, this, &MainWindow::quitFromTray);
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
     struct NavShortcut
@@ -320,6 +328,7 @@ void MainWindow::setupMenu()
         {"&Watchlist", PageWatchlist, Qt::Key_2},
         {"&Portfolio", PagePortfolio, Qt::Key_3},
         {"&Alerts", PageAlerts, Qt::Key_4},
+        {"&Spread Calculator", PageSpreadCalculator, Qt::Key_5},
     };
     for (const NavShortcut &nav : navShortcuts) {
         QAction *action = viewMenu->addAction(tr(nav.label));
@@ -327,6 +336,44 @@ void MainWindow::setupMenu()
         connect(action, &QAction::triggered, this,
                 [this, pageIndex = nav.pageIndex]() { selectPage(pageIndex); });
     }
+}
+
+void MainWindow::setupTrayIcon()
+{
+    // Not every desktop environment provides a tray (and it's outright absent
+    // when running headless/offscreen, e.g. under automated smoke tests) —
+    // fall back to closing normally rather than swallowing every close.
+    if (!QSystemTrayIcon::isSystemTrayAvailable())
+        return;
+
+    const QIcon icon(QStringLiteral(":/icons/app.png"));
+
+    auto *trayMenu = new QMenu(this);
+    QAction *showAction = trayMenu->addAction(tr("Show %1").arg(Config::ApplicationName));
+    connect(showAction, &QAction::triggered, this, [this]() {
+        showNormal();
+        raise();
+        activateWindow();
+    });
+    trayMenu->addSeparator();
+    QAction *quitAction = trayMenu->addAction(tr("Quit"));
+    connect(quitAction, &QAction::triggered, this, &MainWindow::quitFromTray);
+
+    m_trayIcon = new QSystemTrayIcon(icon, this);
+    m_trayIcon->setToolTip(Config::ApplicationName);
+    m_trayIcon->setContextMenu(trayMenu);
+    connect(m_trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
+        if (reason != QSystemTrayIcon::Trigger && reason != QSystemTrayIcon::DoubleClick)
+            return;
+        if (isVisible()) {
+            hide();
+        } else {
+            showNormal();
+            raise();
+            activateWindow();
+        }
+    });
+    m_trayIcon->show();
 }
 
 void MainWindow::restoreWindowState()
@@ -362,7 +409,27 @@ void MainWindow::closeEvent(QCloseEvent *event)
     settings.setValue(QStringLiteral("navKey"), currentNavSelectionKey());
     settings.endGroup();
 
+    if (!m_quitting && m_trayIcon) {
+        event->ignore();
+        hide();
+        if (!m_trayHintShown) {
+            m_trayHintShown = true;
+            m_trayIcon->showMessage(
+                Config::ApplicationName,
+                tr("Still running in the background — alerts keep polling. Right-click the tray icon to quit."),
+                QSystemTrayIcon::Information, 4000);
+        }
+        return;
+    }
+
     QMainWindow::closeEvent(event);
+    qApp->quit();
+}
+
+void MainWindow::quitFromTray()
+{
+    m_quitting = true;
+    close();
 }
 
 void MainWindow::onCommoditySelected(const QString &commodityName)
@@ -450,6 +517,7 @@ void MainWindow::rebuildNavList()
     addPage(QStringLiteral("★"), tr("Watchlist"), PageWatchlist);
     addPage(QStringLiteral("\U0001F4BC"), tr("Portfolio"), PagePortfolio);
     addPage(QStringLiteral("\U0001F514"), tr("Alerts"), PageAlerts);
+    addPage(QStringLiteral("\U0001F9EE"), tr("Spread Calculator"), PageSpreadCalculator);
 
     addHeader(tr("PRO"));
     addPlaceholder(QStringLiteral("\U0001F4CA"), tr("Analytics Workspace"));
@@ -460,7 +528,6 @@ void MainWindow::rebuildNavList()
     addPlaceholder(QStringLiteral("\U0001F967"), tr("Portfolio Analytics"));
     addPlaceholder(QStringLiteral("\U0001F9EA"), tr("Backtest Sandbox"));
     addPlaceholder(QStringLiteral("\U0001F4C8"), tr("Forward Curves"));
-    addPlaceholder(QStringLiteral("\U0001F9EE"), tr("Spread Calculator"));
     addPlaceholder(QStringLiteral("\U0001F465"), tr("COT Reports"));
     addPlaceholder(QStringLiteral("\U000021C5"), tr("Roll Yield Scanner"));
     addPlaceholder(QStringLiteral("\U0001F30A"), tr("Volatility Cone"));
@@ -539,6 +606,33 @@ void MainWindow::onNavRowChanged(int row)
     } else if (nav.type == QStringLiteral("placeholder")) {
         statusBar()->showMessage(tr("%1 — coming soon").arg(nav.category), 3000);
     }
+}
+
+void MainWindow::onTriggersLoaded(const QVector<PriceAlertTrigger> &triggers)
+{
+    m_alertsPanel->setTriggers(triggers);
+
+    for (const PriceAlertTrigger &trigger : triggers) {
+        if (m_seenTriggerIds.contains(trigger.id))
+            continue;
+        m_seenTriggerIds.insert(trigger.id);
+
+        // Skip notifying for the backlog fetched right after startup/login —
+        // only alerts that fire *during* this session should pop a balloon.
+        if (!m_triggersInitialized)
+            continue;
+
+        if (m_trayIcon) {
+            const QString verb = trigger.condition == QStringLiteral("above") ? tr("rose above") : tr("fell below");
+            m_trayIcon->showMessage(
+                trigger.commodityName,
+                tr("%1 %2 %3 (now %4)")
+                    .arg(trigger.commodityName, verb, QString::number(trigger.targetPrice, 'f', 2),
+                         QString::number(trigger.triggeredPrice, 'f', 2)),
+                QSystemTrayIcon::Information, 8000);
+        }
+    }
+    m_triggersInitialized = true;
 }
 
 void MainWindow::onTimeframeChanged(const QString &timeframe)

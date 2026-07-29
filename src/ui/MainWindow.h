@@ -1,9 +1,11 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QSet>
 #include <QVector>
 
 #include "models/Commodity.h"
+#include "models/PriceAlert.h"
 
 class Session;
 class SupabaseClient;
@@ -17,12 +19,14 @@ class WatchlistPanel;
 class DashboardPanel;
 class PortfolioPanel;
 class AlertsPanel;
+class SpreadCalculatorPanel;
 class QListWidget;
 class QListWidgetItem;
 class QStackedWidget;
 class QProgressBar;
 class QLabel;
 class QCloseEvent;
+class QSystemTrayIcon;
 
 class MainWindow : public QMainWindow
 {
@@ -41,6 +45,8 @@ private slots:
     void onLogout();
     void onSessionExpired();
     void onNavRowChanged(int row);
+    void onTriggersLoaded(const QVector<PriceAlertTrigger> &triggers);
+    void quitFromTray();
 
 private:
     // A sidebar row is either a non-selectable section label ("header"), a
@@ -56,6 +62,7 @@ private:
 
     void setupUi();
     void setupMenu();
+    void setupTrayIcon();
     void restoreWindowState();
     void rebuildNavList();
     QString currentNavSelectionKey() const;
@@ -82,9 +89,20 @@ private:
     WatchlistPanel *m_watchlistPanel;
     PortfolioPanel *m_portfolioPanel;
     AlertsPanel *m_alertsPanel;
+    SpreadCalculatorPanel *m_spreadCalculatorPanel;
 
     QProgressBar *m_loadingIndicator;
     QLabel *m_errorBanner;
+
+    QSystemTrayIcon *m_trayIcon = nullptr;
+    bool m_quitting = false;
+    bool m_trayHintShown = false;
+
+    // Trigger ids already seen (across app polls), so the backlog of
+    // already-fired alerts fetched right after login doesn't spam a
+    // notification per row — only genuinely new ones do.
+    QSet<QString> m_seenTriggerIds;
+    bool m_triggersInitialized = false;
 
     QVector<Commodity> m_commodities;
     QString m_selectedCommodity;

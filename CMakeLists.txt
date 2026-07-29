@@ -24,6 +24,8 @@ set(APP_SOURCES
     src/core/SupabaseClient.cpp
     src/core/Session.h
     src/core/Session.cpp
+    src/core/SpreadFormulas.h
+    src/core/SpreadFormulas.cpp
     src/models/Commodity.h
     src/models/Commodity.cpp
     src/models/OhlcBar.h
@@ -78,6 +80,8 @@ set(APP_SOURCES
     src/ui/AlertsTableModel.cpp
     src/ui/AddAlertDialog.h
     src/ui/AddAlertDialog.cpp
+    src/ui/SpreadCalculatorPanel.h
+    src/ui/SpreadCalculatorPanel.cpp
     resources/resources.qrc
 )
 
