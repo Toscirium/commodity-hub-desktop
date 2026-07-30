@@ -23,6 +23,7 @@ public:
 
     void setRows(const QVector<Row> &rows);
     const PortfolioPosition &positionAt(int row) const { return m_rows.at(row).position; }
+    const Row &rowAt(int row) const { return m_rows.at(row); }
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;

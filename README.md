@@ -10,10 +10,12 @@ parity.
 
 ## Requirements
 
-- **Qt 6.2+** with the Core, Widgets, Network, and WebEngineWidgets modules. WebEngineWidgets
-  bundles Chromium and is a genuinely heavy dependency (hundreds of MB) — it's what hosts
-  the candlestick/line chart (TradingView's `lightweight-charts`, vendored under
-  `resources/tradingview/`, rendered inside a `QWebEngineView`).
+- **Qt 6.2+** with the Core, Widgets, Network, WebEngineWidgets, and PrintSupport modules.
+  WebEngineWidgets bundles Chromium and is a genuinely heavy dependency (hundreds of MB) —
+  it's what hosts the candlestick/line chart (TradingView's `lightweight-charts`, vendored
+  under `resources/tradingview/`, rendered inside a `QWebEngineView`). PrintSupport backs
+  the Portfolio panel's PDF statement export and is bundled with `qt6-base-dev` on Linux, so
+  it needs no separate package there.
 - **CMake 3.21+**
 - A C++20 compiler (GCC 11+, Clang 14+, or MSVC 2022+)
 

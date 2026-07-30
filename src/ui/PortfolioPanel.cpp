@@ -2,15 +2,22 @@
 
 #include <QColor>
 #include <QComboBox>
+#include <QDateTime>
+#include <QFile>
+#include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QPageLayout>
 #include <QPalette>
+#include <QPrinter>
 #include <QPushButton>
 #include <QTableView>
+#include <QTextDocument>
 #include <QVBoxLayout>
 
 #include "AddPositionDialog.h"
@@ -70,6 +77,9 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     m_removeButton = new QPushButton(tr("Remove"), this);
     m_removeButton->setObjectName(QStringLiteral("destructiveButton"));
     m_removeButton->setEnabled(false);
+    m_exportButton = new QPushButton(tr("Export PDF"), this);
+    m_exportButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_exportButton->setEnabled(false);
 
     auto *portfolioRow = new QHBoxLayout;
     portfolioRow->addWidget(m_portfolioCombo, 1);
@@ -86,6 +96,7 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     buttonRow->addWidget(m_editButton);
     buttonRow->addWidget(m_removeButton);
     buttonRow->addStretch(1);
+    buttonRow->addWidget(m_exportButton);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(14, 14, 14, 14);
@@ -109,6 +120,7 @@ PortfolioPanel::PortfolioPanel(QWidget *parent)
     connect(m_addButton, &QPushButton::clicked, this, &PortfolioPanel::onAddClicked);
     connect(m_editButton, &QPushButton::clicked, this, &PortfolioPanel::onEditClicked);
     connect(m_removeButton, &QPushButton::clicked, this, &PortfolioPanel::onRemoveClicked);
+    connect(m_exportButton, &QPushButton::clicked, this, &PortfolioPanel::onExportClicked);
 
     refreshSummary();
 }
@@ -175,6 +187,7 @@ void PortfolioPanel::refreshModel()
     m_model->setRows(rows);
     m_editButton->setEnabled(false);
     m_removeButton->setEnabled(false);
+    m_exportButton->setEnabled(!rows.isEmpty());
 
     m_tableView->setVisible(!rows.isEmpty());
     m_emptyLabel->setVisible(rows.isEmpty());
@@ -182,36 +195,40 @@ void PortfolioPanel::refreshModel()
     refreshSummary();
 }
 
-void PortfolioPanel::refreshSummary()
+PortfolioPanel::Totals PortfolioPanel::computeTotals() const
 {
-    double totalValue = 0.0;
-    double totalCost = 0.0;
-    bool allPricesKnown = true;
+    Totals totals;
 
     for (int i = 0; i < m_model->rowCount(); ++i) {
         const PortfolioPosition &position = m_model->positionAt(i);
-        totalCost += position.quantity * position.entryPrice;
+        totals.cost += position.quantity * position.entryPrice;
 
         bool priceKnown = false;
         for (const Commodity &c : m_commodities) {
             if (c.name == position.commodityName) {
-                totalValue += position.quantity * c.price;
+                totals.value += position.quantity * c.price;
                 priceKnown = true;
                 break;
             }
         }
         if (!priceKnown) {
-            allPricesKnown = false;
-            totalValue += position.quantity * position.entryPrice;
+            totals.allPricesKnown = false;
+            totals.value += position.quantity * position.entryPrice;
         }
     }
 
-    const double totalReturn = totalValue - totalCost;
-    const double returnPct = totalCost > 0.0 ? (totalReturn / totalCost) * 100.0 : 0.0;
+    return totals;
+}
 
-    m_totalValueLabel->setText(tr("Total Value\n%1%2").arg(QString::number(totalValue, 'f', 2),
-                                                             allPricesKnown ? QString() : tr(" (partial)")));
-    m_totalCostLabel->setText(tr("Total Cost\n%1").arg(QString::number(totalCost, 'f', 2)));
+void PortfolioPanel::refreshSummary()
+{
+    const Totals totals = computeTotals();
+    const double totalReturn = totals.value - totals.cost;
+    const double returnPct = totals.cost > 0.0 ? (totalReturn / totals.cost) * 100.0 : 0.0;
+
+    m_totalValueLabel->setText(tr("Total Value\n%1%2").arg(QString::number(totals.value, 'f', 2),
+                                                             totals.allPricesKnown ? QString() : tr(" (partial)")));
+    m_totalCostLabel->setText(tr("Total Cost\n%1").arg(QString::number(totals.cost, 'f', 2)));
 
     const QString sign = totalReturn >= 0.0 ? "+" : "";
     m_totalReturnLabel->setText(
@@ -276,4 +293,107 @@ void PortfolioPanel::onRemoveClicked()
         return;
 
     emit removePositionRequested(m_model->positionAt(index.row()).id);
+}
+
+void PortfolioPanel::onExportClicked()
+{
+    if (m_model->rowCount() == 0)
+        return;
+
+    const QString portfolioName = m_portfolioCombo->currentText().isEmpty()
+        ? tr("Portfolio")
+        : m_portfolioCombo->currentText();
+    const QString suggestedName =
+        QStringLiteral("%1-%2.pdf").arg(portfolioName, QDate::currentDate().toString(QStringLiteral("yyyy-MM-dd")));
+    const QString filePath =
+        QFileDialog::getSaveFileName(this, tr("Export Portfolio Statement"), suggestedName, tr("PDF Files (*.pdf)"));
+    if (filePath.isEmpty())
+        return;
+
+    QString rowsHtml;
+    for (int i = 0; i < m_model->rowCount(); ++i) {
+        const PortfolioTableModel::Row &row = m_model->rowAt(i);
+        const double entryValue = row.position.quantity * row.position.entryPrice;
+        const double currentValue = row.priceKnown ? row.position.quantity * row.currentPrice : entryValue;
+        const double rowReturn = row.priceKnown ? currentValue - entryValue : 0.0;
+        const double rowReturnPct =
+            row.priceKnown && row.position.entryPrice != 0.0
+            ? (row.currentPrice - row.position.entryPrice) / row.position.entryPrice * 100.0
+            : 0.0;
+        const QString returnColor = rowReturn >= 0.0 ? QStringLiteral("#1a7f4e") : QStringLiteral("#b3261e");
+
+        rowsHtml += QStringLiteral("<tr>"
+                                    "<td>%1</td>"
+                                    "<td align='right'>%2</td>"
+                                    "<td align='right'>%3</td>"
+                                    "<td align='right'>%4</td>"
+                                    "<td align='right'>%5</td>"
+                                    "<td align='right' style='color:%6'>%7</td>"
+                                    "<td align='right' style='color:%6'>%8</td>"
+                                    "</tr>")
+                         .arg(row.position.commodityName.toHtmlEscaped())
+                         .arg(QString::number(row.position.quantity, 'f',
+                                               row.position.quantity == int(row.position.quantity) ? 0 : 4))
+                         .arg(QString::number(row.position.entryPrice, 'f', 2))
+                         .arg(row.priceKnown ? QString::number(row.currentPrice, 'f', 2) : QStringLiteral("—"))
+                         .arg(row.priceKnown ? QString::number(currentValue, 'f', 2) : QStringLiteral("—"))
+                         .arg(returnColor)
+                         .arg(row.priceKnown
+                                  ? QStringLiteral("%1%2").arg(rowReturn >= 0.0 ? "+" : "").arg(rowReturn, 0, 'f', 2)
+                                  : QStringLiteral("—"))
+                         .arg(row.priceKnown ? QStringLiteral("%1%2%")
+                                                    .arg(rowReturnPct >= 0.0 ? "+" : "")
+                                                    .arg(rowReturnPct, 0, 'f', 2)
+                                              : QStringLiteral("—"));
+    }
+
+    const Totals totals = computeTotals();
+    const double totalReturn = totals.value - totals.cost;
+    const double totalReturnPct = totals.cost > 0.0 ? (totalReturn / totals.cost) * 100.0 : 0.0;
+    const QString totalReturnColor = totalReturn >= 0.0 ? QStringLiteral("#1a7f4e") : QStringLiteral("#b3261e");
+    const QString totalReturnSign = totalReturn >= 0.0 ? QStringLiteral("+") : QString();
+    // Built separately (rather than as more %N placeholders below) since Qt's
+    // QString::arg() place markers only reliably disambiguate %1..%9 — a %10
+    // right after other digit placeholders risks being parsed as %1 + "0".
+    const QString totalReturnText = QStringLiteral("%1%2 (%1%3%)")
+                                         .arg(totalReturnSign, QString::number(totalReturn, 'f', 2),
+                                              QString::number(totalReturnPct, 'f', 2));
+
+    const QString html =
+        QStringLiteral(
+            "<html><body style='font-family:sans-serif;'>"
+            "<h2 style='margin-bottom:2px;'>CommodityHub Portfolio Statement</h2>"
+            "<p style='color:#555;margin-top:0;'>%1 &middot; Generated %2%3</p>"
+            "<table border='1' cellspacing='0' cellpadding='6' width='100%' style='border-collapse:collapse;'>"
+            "<tr style='background:#eee;'>"
+            "<th align='left'>Commodity</th><th align='right'>Qty</th><th align='right'>Entry</th>"
+            "<th align='right'>Price</th><th align='right'>Value</th><th align='right'>Return</th>"
+            "<th align='right'>Return %</th>"
+            "</tr>"
+            "%4"
+            "</table>"
+            "<p style='margin-top:16px;'>"
+            "Total Cost: <b>%5</b> &nbsp;&nbsp; Total Value: <b>%6</b> &nbsp;&nbsp; "
+            "Total Return: <b style='color:%7'>%8</b>"
+            "</p>"
+            "</body></html>")
+            .arg(portfolioName.toHtmlEscaped(), QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH:mm")),
+                 totals.allPricesKnown ? QString() : tr(" &middot; some prices unavailable, entry price used"),
+                 rowsHtml)
+            .arg(QString::number(totals.cost, 'f', 2), QString::number(totals.value, 'f', 2), totalReturnColor,
+                 totalReturnText);
+
+    QTextDocument document;
+    document.setHtml(html);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setPageOrientation(QPageLayout::Portrait);
+    printer.setOutputFileName(filePath);
+    document.print(&printer);
+
+    if (!QFile::exists(filePath)) {
+        QMessageBox::warning(this, tr("Export Failed"), tr("Could not write the PDF file."));
+        return;
+    }
 }

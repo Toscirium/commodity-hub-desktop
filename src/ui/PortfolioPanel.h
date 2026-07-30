@@ -33,13 +33,22 @@ signals:
     void removePositionRequested(const QString &positionId);
 
 private:
+    struct Totals
+    {
+        double value = 0.0;
+        double cost = 0.0;
+        bool allPricesKnown = true;
+    };
+
     void refreshModel();
     void refreshSummary();
+    Totals computeTotals() const;
     void onPortfolioChanged(int index);
     void onNewPortfolioClicked();
     void onAddClicked();
     void onEditClicked();
     void onRemoveClicked();
+    void onExportClicked();
 
     QVector<Commodity> m_commodities;
     QVector<Portfolio> m_portfolios;
@@ -56,4 +65,5 @@ private:
     QPushButton *m_addButton;
     QPushButton *m_editButton;
     QPushButton *m_removeButton;
+    QPushButton *m_exportButton;
 };
