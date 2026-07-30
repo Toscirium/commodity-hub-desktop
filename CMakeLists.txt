@@ -111,3 +111,30 @@ install(TARGETS CommodityHubDesktop
     RUNTIME DESTINATION bin
     BUNDLE DESTINATION .
 )
+
+# Integration test that hits the real production API — see tests/LivePipelineTest.cpp.
+# Not part of the `install()` above; built/run separately (see CI).
+add_executable(LivePipelineTest
+    tests/LivePipelineTest.cpp
+    src/core/Config.h
+    src/core/Session.h
+    src/core/Session.cpp
+    src/core/SupabaseClient.h
+    src/core/SupabaseClient.cpp
+    src/core/SpreadFormulas.h
+    src/core/SpreadFormulas.cpp
+    src/models/Commodity.h
+    src/models/Commodity.cpp
+    src/services/CommodityService.h
+    src/services/CommodityService.cpp
+    src/ui/CommodityTableModel.h
+    src/ui/CommodityTableModel.cpp
+    src/ui/ScreenerPanel.h
+    src/ui/ScreenerPanel.cpp
+)
+target_include_directories(LivePipelineTest PRIVATE src)
+target_link_libraries(LivePipelineTest PRIVATE
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Network
+)

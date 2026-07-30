@@ -29,3 +29,11 @@ jobs:
 
       - name: Smoke test (offscreen)
         run: timeout 10 env QT_QPA_PLATFORM=offscreen ./build/CommodityHubDesktop || test $? -eq 124
+
+      - name: Live API integration test
+        # Hits the real production fetch-all-commodities edge function (same
+        # one the shipped app calls, unauthenticated) and runs the response
+        # through the actual parsing/spread/screener code — see
+        # tests/LivePipelineTest.cpp. Catches API schema drift and real-data
+        # edge cases a synthetic-fixture test wouldn't.
+        run: timeout 45 env QT_QPA_PLATFORM=offscreen ./build/LivePipelineTest
