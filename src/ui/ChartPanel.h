@@ -7,6 +7,8 @@
 
 class QLabel;
 class QComboBox;
+class QPushButton;
+class QVBoxLayout;
 class QWebEngineView;
 
 // Candlestick/line rendering is TradingView's lightweight-charts (vendored in
@@ -25,10 +27,16 @@ public:
 signals:
     void timeframeChanged(const QString &timeframe);
 
+protected:
+    // Watches m_popoutWindow for the user closing it via the OS window
+    // controls, so that case re-docks the chart the same as clicking "Dock".
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private slots:
     void onTimeframeChanged(int index);
     void onChartTypeChanged(int index);
     void onPageLoadFinished(bool ok);
+    void onPopoutClicked();
 
 private:
     void applyChartTypeAvailability();
@@ -36,6 +44,7 @@ private:
     // can be called before that, e.g. while the very first OHLC fetch races the
     // WebEngine page load), then runs it immediately once ready.
     void runJs(const QString &js);
+    void dockChart();
 
     QString m_commodityName;
     bool m_ohlcAvailable = true;
@@ -46,4 +55,16 @@ private:
     QComboBox *m_timeframeCombo;
     QComboBox *m_chartTypeCombo;
     QWebEngineView *m_webView;
+
+    // The webview is the one heavy (Chromium-backed) resource here, so
+    // "popping out" reparents this same QWebEngineView into a separate
+    // top-level window rather than spinning up a second one — everywhere
+    // else, ChartPanel keeps behaving exactly as before (WatchlistPanel still
+    // reparents the whole ChartPanel between watchlist cards; that's fully
+    // orthogonal to where its webview currently lives).
+    QVBoxLayout *m_layout;
+    QPushButton *m_popoutButton;
+    QLabel *m_popoutPlaceholder;
+    QWidget *m_popoutWindow = nullptr;
+    bool m_detached = false;
 };
